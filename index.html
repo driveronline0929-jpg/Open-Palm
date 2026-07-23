@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🧩 AR Open Palm Catch แบมือรับข้อความของดีเมืองกันตัง by สกร.</title>
+    <!-- Tailwind CSS & Google Fonts -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- MediaPipe & Three.js Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <style>
+        body { 
+            font-family: 'Mitr', sans-serif;
+            background-image: url('bg_kantang.jpg'); 
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        #webcam { transform: scaleX(-1); will-change: transform; opacity: 0.38; }
+        .blur-bg { backdrop-filter: blur(14px); }
+    </style>
+</head>
+<body class="bg-slate-950 m-0 p-0 overflow-hidden select-none touch-none w-screen h-screen text-white">
+
+    <!-- แท็กเล่นเพลงประกอบ BGM (วนลูป) -->
+    <audio id="bgm-player" loop preload="auto">
+        <source src="bgm.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- 1. หน้าต่างกรอกชื่อเข้าเล่นเกม -->
+    <div id="screen-login" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 blur-bg p-4 transition-all duration-500">
+        <div class="bg-slate-900/90 border-4 border-cyan-500/40 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center">
+            <div class="text-5xl mb-4 animate-bounce">🧩🖐️</div>
+            <h2 class="text-2xl font-bold text-cyan-400 mb-2">ลงทะเบียนยอดมือปราบ สกร.กันตัง</h2>
+            <p class="text-xs text-slate-300 mb-6">กรอกชื่อจริงเพื่อทดสอบภารกิจแบมือรับข้อความกันตัง</p>
+            <div class="mb-5">
+                <input type="text" id="player-name" placeholder="ชื่อ - นามสกุลของคุณ" 
+                       class="w-full bg-slate-800/90 border-2 border-slate-700 rounded-2xl px-4 py-3 text-base text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all text-center font-medium">
+            </div>
+            <button id="btn-submit-name" class="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black py-3.5 px-4 rounded-xl text-sm shadow-md cursor-pointer transform active:scale-95 transition-all">
+                🖐️ ยืนยันชื่อเข้าเล่น
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. หน้าต้อนรับสรุปกติกาเกม -->
+    <div id="screen-welcome" class="fixed inset-0 z-40 flex flex-col items-center justify-center p-6 bg-slate-950/85 blur-bg text-center hidden opacity-0 transition-all duration-500">
+        <div class="bg-slate-900/90 border-4 border-cyan-500/40 p-8 rounded-3xl shadow-[0_0_40px_rgba(6,182,212,0.3)] max-w-xl w-full">
+            <div class="text-6xl mb-4">🖐️✨</div>
+            <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-emerald-400 mb-3 tracking-wide drop-shadow-md">
+                เกมแบมือรับข้อความของดีเมืองกันตัง
+            </h1>
+            <p class="text-sm text-slate-300 mb-6 leading-relaxed">
+                👉 <span class="text-yellow-400 font-bold animate-pulse">"แบมือออก (กางทั้ง 5 นิ้ว)"</span> เพื่อกางโล่รับเฉพาะข้อความของดีเมืองกันตัง!<br>
+                🟢 รับข้อความกันตัง <b>+10 คะแนน</b> | 🔴 หลบ/ห้ามรับข้อความเมืองอื่น <b>-5 คะแนน</b>
+            </p>
+            
+            <div class="bg-slate-950/70 rounded-xl p-4 text-left text-xs space-y-2 mb-6 border border-slate-800 text-slate-300">
+                <div class="font-bold text-sm text-center text-cyan-400 border-b border-slate-800 pb-1 mb-1">📝 กติกาความสนุก 60 วินาที</div>
+                <div class="flex justify-between"><span>⏱️ เวลาทำภารกิจ</span> <span class="text-yellow-400 font-bold">60 วินาที</span></div>
+                <div class="flex justify-between"><span>🖐️ ท่าทางสั่งการ</span> <span class="text-emerald-400 font-bold">แบมือ (Open Palm) เพื่อรับข้อความ</span></div>
+            </div>
+
+            <button id="btn-play" class="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black py-4 px-6 rounded-2xl text-lg shadow-lg cursor-pointer transform hover:scale-105 active:scale-95 transition-all">
+                🎮 เริ่มภารกิจแบมือรับ!
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. หน้าสรุปผลการแข่งขัน -->
+    <div id="screen-result" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 blur-bg p-6 hidden opacity-0 transition-all duration-500">
+        <div class="bg-slate-900/95 border-4 border-yellow-500/40 p-8 rounded-3xl shadow-2xl max-w-md w-full text-center">
+            <h2 class="text-3xl font-black text-yellow-400 mb-1">🎉 หมดเวลาภารกิจ!</h2>
+            <p class="text-xs text-slate-400 mb-6">สรุปผลคะแนนการแบมือรับข้อความของดีเมืองกันตัง</p>
+            
+            <div class="relative w-32 h-32 mx-auto mb-6 flex items-center justify-center bg-slate-950 rounded-full border border-slate-800 shadow-inner">
+                <div id="medal-emoji" class="text-6xl drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">🏆</div>
+            </div>
+
+            <div class="space-y-3 mb-6 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+                <div>
+                    <div class="text-xs text-slate-400">ชื่อผู้เล่น</div>
+                    <div id="final-name" class="text-base font-bold text-cyan-400 mt-0.5">-</div>
+                </div>
+                <div class="border-t border-slate-800 pt-2 flex justify-around">
+                    <div>
+                        <div class="text-xs text-slate-400">คะแนนสะสม</div>
+                        <div id="final-score" class="text-3xl font-black text-yellow-400 font-mono">0</div>
+                    </div>
+                </div>
+                <div class="border-t border-slate-800 pt-2 px-2">
+                    <div class="text-xs text-slate-400">ระดับความสามารถของคุณ</div>
+                    <div id="final-rank" class="text-sm font-bold text-emerald-400 mt-1 leading-relaxed">กำลังประมวลผล...</div>
+                </div>
+            </div>
+
+            <button id="btn-send-data" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs mb-3 transition-all cursor-pointer">
+                📤 ส่งคะแนนบันทึกลง Google Sheets
+            </button>
+            <button id="btn-restart" class="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs cursor-pointer transition-all">
+                🔄 เล่นใหม่อีกครั้ง
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. ส่วนระบบ HUD หน้าจอเกม -->
+    <div id="game-hud" class="absolute top-4 left-4 right-4 z-40 flex justify-between items-start pointer-events-none hidden">
+        <div class="bg-slate-900/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-slate-800 shadow-2xl text-center">
+            <div id="ui-pilot-name" class="text-xs text-cyan-400 font-bold mb-0.5 truncate max-w-[120px]">👤 ผู้เล่น: -</div>
+            <div class="text-[10px] text-slate-400 font-medium">⏱️ เวลาถอยหลัง</div>
+            <div id="ui-timer" class="text-3xl font-black text-red-500 font-mono">60</div>
+        </div>
+        
+        <div id="palm-status-hud" class="bg-slate-900/90 backdrop-blur-md p-3 px-6 rounded-2xl border-2 border-yellow-400/80 shadow-2xl text-center">
+            <div class="text-[10px] text-yellow-400 font-bold mb-0.5">🖐️ สถานะฝ่ามือ</div>
+            <div id="ui-palm-status" class="text-lg font-black text-white">กำลังสแกน...</div>
+        </div>
+
+        <div class="bg-slate-900/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-slate-800 shadow-2xl text-center">
+            <div class="text-[10px] text-slate-400 font-medium">⭐ คะแนนสะสม</div>
+            <div id="ui-score" class="text-3xl font-black text-yellow-400 font-mono">0</div>
+        </div>
+    </div>
+
+    <video id="webcam" class="absolute w-full h-full object-cover z-10" autoplay playsinline muted></video>
+    <div id="canvas3d" class="absolute w-full h-full z-20 pointer-events-none"></div>
+
+    <script>
+        const GAS_WEB_APP_URL = "วางลิงก์เว็บแอปของคุณตรงนี้";
+        
+        // 🟢 1. คลังข้อความเฉพาะของดีเมืองกันตัง (20 รายการ)
+        const KANTANG_GOOD_TEXTS = [
+            "ต้นยางพาราต้นแรก", 
+            "สถานีรถไฟกันตัง", 
+            "พิพิธภัณฑ์พระยารัษฎา", 
+            "สวนสาธารณะควนตำหนวด", 
+            "สกร.ระดับอำเภอกันตัง", 
+            "ศกร.ระดับตำบลกันตัง", 
+            "บ่อน้ำร้อนควนแคง", 
+            "แพขนานยนต์กันตัง", 
+            "ประภาคารกันตัง", 
+            "ท่าเรือประมงกันตัง",
+            "ถ้ำมรกต",
+            "เกาะมุกด์",
+            "เกาะกระดาน",
+            "หาดหยงหลิง",
+            "สตรีทอาร์ตเมืองกันตัง",
+            "ศาลเจ้าเก่งฮกเก้ตึ๊ง",
+            "อาคารชิโนโปตุกีสกันตัง",
+            "แม่น้ำตรัง ณ กันตัง",
+            "ราดหน้าซูเปอร์กันตัง",
+            "เมืองท่าประวัติศาสตร์อันดามัน"
+        ];
+
+        // 🔴 2. คลังข้อความของสถานที่อื่น (20 รายการ)
+        const OTHER_BAD_TEXTS = [
+            "ประตูท่าแพ", 
+            "ดอยสุเทพ", 
+            "ตลาดน้ำอัมพวา", 
+            "หาดป่าตอง", 
+            "สะพานข้ามแม่น้ำแคว", 
+            "วัดพระแก้ว", 
+            "เขาใหญ่", 
+            "เกาะเสม็ด", 
+            "แหลมพรหมเทพ", 
+            "บึงบอระเพ็ด",
+            "หาดพัทยา",
+            "ภูทับเบิก",
+            "เขาค้อ",
+            "ภูกระดึง",
+            "สามพันโบก",
+            "อำเภอปาย",
+            "เกาะช้าง",
+            "ตลาดน้ำดำเนินสะดวก",
+            "วัดร่องขุ่น",
+            "สะพานมอญ"
+        ];
+
+        let pName = "";
+        let timeElapsed = 60; // นับถอยหลัง 60 วินาที
+        let score = 0;
+        let gameActive = false;
+        let gameTimerInterval = null;
+        let audioCtx = null;
+
+        let hasHandDetected = false;
+        let isOpenPalm = false;
+
+        let smoothedHandX = 0;
+        let smoothedHandY = 0;
+
+        // ออบเจกต์การ์ดที่กำลังลอยตกลงมา
+        let activeCards = [];
+        let spawnTimer = 0;
+        const SPAWN_INTERVAL = 1100; // สร้างการ์ดใหม่ทุกๆ 1.1 วินาที
+
+        const bgmPlayer = document.getElementById('bgm-player');
+        bgmPlayer.volume = 0.25;
+
+        // Setup Three.js ฉากหลัง 3D
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas3d').appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+        scene.add(ambientLight);
+
+        // โล่แสงรองรับฝ่ามือ (Palm Shield Catcher)
+        const palmShieldGeo = new THREE.RingGeometry(0.25, 0.42, 32);
+        const palmShieldMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0, side: THREE.DoubleSide });
+        const palmShield = new THREE.Mesh(palmShieldGeo, palmShieldMat);
+        palmShield.position.set(100, 100, -5);
+        scene.add(palmShield);
+
+        document.getElementById('btn-submit-name').addEventListener('click', () => {
+            const inputVal = document.getElementById('player-name').value.trim();
+            if (inputVal === "") { alert("❌ กรุณากรอกชื่อจริงก่อนเข้าเล่นเกมนะครับ!"); return; }
+            pName = inputVal;
+            
+            bgmPlayer.play().catch(e => console.log("รอ User Interaction ในการเล่นเสียง:", e));
+
+            document.getElementById('ui-pilot-name').innerText = `👤 ผู้เล่น: ${pName}`;
+            document.getElementById('screen-login').classList.add('opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                document.getElementById('screen-login').classList.add('hidden');
+                const welcomeScreen = document.getElementById('screen-welcome');
+                welcomeScreen.classList.remove('hidden');
+                setTimeout(() => { welcomeScreen.classList.add('opacity-100'); }, 50);
+            }, 500);
+        });
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            if (type === 'correct') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(140, audioCtx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+            }
+        }
+
+        // ฟังก์ชันสุ่มสร้างการ์ดป้ายข้อความตกลงมาจากขอบฟ้าด้านบน
+        function spawnTextCard() {
+            const isKantang = Math.random() > 0.38; // โอกาส 62% เป็นข้อความกันตัง
+            const textPool = isKantang ? KANTANG_GOOD_TEXTS : OTHER_BAD_TEXTS;
+            const chosenText = textPool[Math.floor(Math.random() * textPool.length)];
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 440; canvas.height = 140;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = isKantang ? 'rgba(15, 23, 42, 0.92)' : 'rgba(30, 27, 75, 0.92)';
+            ctx.roundRect(0, 0, 440, 140, 24); ctx.fill();
+            
+            ctx.strokeStyle = isKantang ? '#06b6d4' : '#a855f7';
+            ctx.lineWidth = 10; ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 28px Mitr';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(chosenText, 220, 70);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.62), mat);
+
+            const randomX = (Math.random() - 0.5) * 4.4;
+            mesh.position.set(randomX, 2.8, -5.0);
+            scene.add(mesh);
+
+            activeCards.push({
+                mesh: mesh,
+                isKantang: isKantang,
+                text: chosenText,
+                fallSpeed: 0.02 + Math.random() * 0.015
+            });
+        }
+
+        function startGame() {
+            gameActive = true;
+            timeElapsed = 60; score = 0;
+            document.getElementById('ui-timer').innerText = timeElapsed;
+            document.getElementById('ui-score').innerText = score;
+            document.getElementById('game-hud').classList.remove('hidden');
+
+            activeCards.forEach(c => scene.remove(c.mesh));
+            activeCards = [];
+
+            gameTimerInterval = setInterval(() => {
+                timeElapsed--;
+                document.getElementById('ui-timer').innerText = timeElapsed;
+                if (timeElapsed <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            animateLoop();
+        }
+
+        function animateLoop() {
+            if (!gameActive) return;
+            requestAnimationFrame(animateLoop);
+
+            spawnTimer += 16.67;
+            if (spawnTimer >= SPAWN_INTERVAL) {
+                spawnTextCard();
+                spawnTimer = 0;
+            }
+
+            for (let i = activeCards.length - 1; i >= 0; i--) {
+                const card = activeCards[i];
+                card.mesh.position.y -= card.fallSpeed;
+
+                if (hasHandDetected && isOpenPalm) {
+                    let dist = palmShield.position.distanceTo(card.mesh.position);
+                    
+                    if (dist < 0.85) {
+                        if (card.isKantang) {
+                            score += 10;
+                            playSound('correct');
+                            palmShieldMat.color.setHex(0x10b981);
+                        } else {
+                            score = Math.max(0, score - 5);
+                            playSound('wrong');
+                            palmShieldMat.color.setHex(0xef4444);
+                        }
+
+                        document.getElementById('ui-score').innerText = score;
+
+                        scene.remove(card.mesh);
+                        activeCards.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                if (card.mesh.position.y < -3.0) {
+                    scene.remove(card.mesh);
+                    activeCards.splice(i, 1);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(gameTimerInterval);
+            document.getElementById('game-hud').classList.add('hidden');
+            
+            let rankText = "", medalEmoji = "🏆";
+            if (score >= 120) { 
+                rankText = "👑 คุณคือผู้เชี่ยวชาญยอดมือปราบกันตัง (ระดับยอดเยี่ยม)"; medalEmoji = "🥇"; 
+            } else if (score >= 70) { 
+                rankText = "🌿 คุณคือผู้รู้จริงในอำเภอกันตัง (ระดับดีมาก)"; medalEmoji = "🥈"; 
+            } else { 
+                rankText = "🚀 พยายามอีกนิดนะ! ยังไม่เป็นผู้รู้จริง ยังไงขอให้เที่ยวกันตังอย่างมีความสุข"; medalEmoji = "🥉"; 
+            }
+
+            document.getElementById('final-name').innerText = pName;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-rank').innerText = rankText;
+            document.getElementById('medal-emoji').innerText = medalEmoji;
+            
+            const resScreen = document.getElementById('screen-result');
+            resScreen.classList.remove('hidden');
+            setTimeout(() => { resScreen.classList.add('opacity-100'); }, 50);
+        }
+
+        function checkOpenPalm(landmarks) {
+            const isIndexOpen = landmarks[8].y < landmarks[6].y;
+            const isMiddleOpen = landmarks[12].y < landmarks[10].y;
+            const isRingOpen = landmarks[16].y < landmarks[14].y;
+            const isPinkyOpen = landmarks[20].y < landmarks[18].y;
+            
+            return (isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen);
+        }
+
+        function onHandResults(results) {
+            const palmStatusText = document.getElementById('ui-palm-status');
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                hasHandDetected = true;
+                const hand = results.multiHandLandmarks[0];
+                
+                const palmCenter = hand[9];
+                let targetX = -(palmCenter.x - 0.5) * 8.5;
+                let targetY = -(palmCenter.y - 0.5) * 6.0;
+
+                smoothedHandX += (targetX - smoothedHandX) * 0.3;
+                smoothedHandY += (targetY - smoothedHandY) * 0.3;
+
+                isOpenPalm = checkOpenPalm(hand);
+
+                if (isOpenPalm) {
+                    palmStatusText.innerText = "🖐️ แบมือ (พร้อมรับ)";
+                    palmStatusText.className = "text-lg font-black text-emerald-400 animate-pulse";
+                    
+                    palmShield.position.set(smoothedHandX, smoothedHandY, -4.9);
+                    palmShieldMat.opacity = 0.85;
+                    palmShieldMat.color.setHex(0x06b6d4);
+                } else {
+                    palmStatusText.innerText = "✊ กำมือ/กำไว้ (ไม่รับ)";
+                    palmStatusText.className = "text-lg font-black text-slate-400";
+                    
+                    palmShieldMat.opacity = 0;
+                    palmShield.position.set(100, 100, -5);
+                }
+            } else {
+                hasHandDetected = false; isOpenPalm = false;
+                palmStatusText.innerText = "ไม่พบฝ่ามือ";
+                palmStatusText.className = "text-lg font-black text-slate-500";
+                palmShieldMat.opacity = 0;
+                palmShield.position.set(100, 100, -5);
+            }
+        }
+
+        const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+        hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.65, minTrackingConfidence: 0.65 });
+        hands.onResults(onHandResults);
+
+        const videoElement = document.getElementById('webcam');
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+                });
+                videoElement.srcObject = stream;
+                videoElement.onloadedmetadata = () => { videoElement.play(); requestAnimationFrame(processVideoFrame); };
+            } catch (err) {
+                try {
+                    const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    videoElement.srcObject = fallbackStream; videoElement.play(); requestAnimationFrame(processVideoFrame);
+                } catch (fallbackErr) { console.error("ไม่พบกล้อง:", fallbackErr); }
+            }
+        }
+
+        async function processVideoFrame() {
+            if (videoElement.readyState >= 2) await hands.send({ image: videoElement });
+            requestAnimationFrame(processVideoFrame);
+        }
+        setupCamera();
+
+        // บันทึกสถิติลง Google Sheets
+        document.getElementById('btn-send-data').addEventListener('click', () => {
+            const btn = document.getElementById('btn-send-data');
+            btn.innerText = "⏳ กำลังยิงสถิติ..."; btn.disabled = true;
+
+            fetch(GAS_WEB_APP_URL, {
+                method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: pName, score: score, status: "สำเร็จภารกิจแบมือรับข้อความของดีเมืองกันตัง 60 วินาที" })
+            }).then(() => {
+                btn.innerText = "📤 บันทึกสถิติสำเร็จ!";
+                btn.className = "w-full bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs mb-3";
+            }).catch(() => { alert("ขัดข้องในการบันทึก"); btn.disabled = false; });
+        });
+
+        document.getElementById('btn-play').addEventListener('click', () => {
+            document.getElementById('screen-welcome').classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => { document.getElementById('screen-welcome').classList.add('hidden'); }, 500);
+            startGame();
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            document.getElementById('screen-result').classList.remove('opacity-100');
+            document.getElementById('screen-result').classList.add('hidden');
+            const welcomeScreen = document.getElementById('screen-welcome');
+            welcomeScreen.classList.remove('hidden');
+            setTimeout(() => { welcomeScreen.classList.add('opacity-100'); }, 50);
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
